@@ -1,16 +1,10 @@
-import os
+from models import Trip, Destination, Activity
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
-from models import Base, Trip, Destination, Activity
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-DB_PATH = os.path.join(BASE_DIR, "travel_journal.db")
-
-engine = create_engine(f"sqlite:///{DB_PATH}")
+engine = create_engine("sqlite:///travel_journal.db")
 Session = sessionmaker(bind=engine)
 session = Session()
-
-Base.metadata.create_all(engine)
 
 trip1 = Trip(name="Europe Summer 2025")
 
@@ -21,10 +15,8 @@ act1 = Activity(name="Visited the Louvre", destination=dest1)
 act2 = Activity(name="Climbed the Eiffel Tower", destination=dest1)
 act3 = Activity(name="Colosseum Tour", destination=dest2)
 
-session.query(Activity).delete()
-session.query(Destination).delete()
-session.query(Trip).delete()
 session.add_all([trip1, dest1, dest2, act1, act2, act3])
 
 session.commit()
-print("✅ Database seeded successfully at:", DB_PATH)
+
+print("✅ Seeding complete!")
