@@ -1,4 +1,4 @@
-from lib.db import init_db
+from lib.db.setup import init_db 
 from lib.db.models import Trip, Destination, Activity, Category, Tag
 from datetime import datetime
 
