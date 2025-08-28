@@ -1,146 +1,143 @@
-from sqlalchemy.orm import declarative_base, relationship
-from sqlalchemy import Column, Integer, String, ForeignKey, Date, Float, Table
+from lib.db import init_db
+from lib.db.models import Trip, Destination, Activity, Category, Tag
+from datetime import datetime
 
-Base = declarative_base()
 
-trip_tags = Table(
-    "trip_tags",
-    Base.metadata,
-    Column("trip_id", Integer, ForeignKey("trips.id")),
-    Column("tag_id", Integer, ForeignKey("tags.id"))
-)
 
-class Trip(Base):
-    __tablename__ = "trips"
+session = init_db()
 
-    id = Column(Integer, primary_key=True)
-    name = Column(String, nullable=False)
-    start_date = Column(Date, nullable=True)
-    end_date = Column(Date, nullable=True)
-    notes = Column(String, nullable=True)
+def parse_date(date_str):
+    try:
+        return datetime.strptime(date_str, "%Y-%m-%d").date() if date_str else None
+    except ValueError:
+        print("⚠ Oops! That date didn’t look right. Please use YYYY-MM-DD format.")
+        return None
 
-    destinations = relationship("Destination", back_populates="trip", cascade="all, delete-orphan")
-    activities = relationship("Activity", secondary="destinations", viewonly=True)
 
-    category_id = Column(Integer, ForeignKey("categories.id"))
-    category = relationship("Category", back_populates="trips")
+def main_menu():
+    while True:
+        print("\n🌍 Welcome to Your Travel Journal 🌍")
+        print("What would you like to do today?")
+        print("1. ✈ Manage Trips")
+        print("2. 🏝 Manage Destinations")
+        print("3. 🎟 Manage Activities")
+        print("4. 🚪 Exit")
 
-    tags = relationship("Tag", secondary=trip_tags, back_populates="trips")
 
-    @staticmethod
-    def create(session, name, start=None, end=None, notes=None, category=None, tags=None):
-        trip = Trip(name=name, start_date=start, end_date=end, notes=notes, category=category)
-        if tags:
-            trip.tags = tags
-        session.add(trip)
-        session.commit()
-        return trip
+        choice = input("\n👉 Choose an option (1-4): ").strip()
 
-    @staticmethod
-    def get_all(session):
-        return session.query(Trip).all()
 
-    @staticmethod
-    def find_by_id(session, trip_id):
-        return session.query(Trip).get(trip_id)
+        if choice == "1":
+            trip_menu()
+        elif choice == "2":
+            destination_menu()
+        elif choice == "3":
+            activity_menu()
+        elif choice == "4":
+            print("\n👋 Thanks for using Travel Journal. Safe travels!")
+            break
+        else:
+            print("⚠ Hmm, I didn’t get that. Please choose 1-4.")
 
-    def delete(self, session):
-        session.delete(self)
-        session.commit()
 
-class Destination(Base):
-    __tablename__ = "destinations"
 
-    id = Column(Integer, primary_key=True)
-    name = Column(String, nullable=False)
-    country = Column(String, nullable=False)
-    arrival_date = Column(Date, nullable=True)
-    departure_date = Column(Date, nullable=True)
 
-    trip_id = Column(Integer, ForeignKey("trips.id"))
-    trip = relationship("Trip", back_populates="destinations")
-    activities = relationship("Activity", back_populates="destination", cascade="all, delete-orphan")
+def trip_menu():
+    while True:
+        print("\n--- 🧳 Trip Menu ---")
+        print("1. ➕ Create a new Trip")
+        print("2. 📋 View all Trips")
+        print("3. ❌ Delete a Trip")
+        print("4. 🔍 Search Trips")
+        print("5. 📊 Trip Summary & Stats")
+        print("6. 🔙 Back to Main Menu")
 
-    @staticmethod
-    def create(session, name, country, trip, arrival=None, departure=None):
-        dest = Destination(name=name, country=country, trip=trip, arrival_date=arrival, departure_date=departure)
-        session.add(dest)
-        session.commit()
-        return dest
+        choice = input("\n👉 Choose an option (1-6): ").strip()
 
-    @staticmethod
-    def get_all(session):
-        return session.query(Destination).all()
 
-    @staticmethod
-    def find_by_id(session, dest_id):
-        return session.query(Destination).get(dest_id)
+        if choice == "1":
+            name = input("Trip name: ").strip()
+            start = parse_date(input("Start date (YYYY-MM-DD, leave blank if none): ").strip())
+            end = parse_date(input("End date (YYYY-MM-DD, leave blank if none): ").strip())
+            notes = input("Notes about this trip (optional): ").strip()
 
-    def delete(self, session):
-        session.delete(self)
-        session.commit()
+            category_name = input("Category (optional, e.g., Vacation, Work): ").strip()
+            category = Category.get_or_create(session, category_name) if category_name else None
 
-class Activity(Base):
-    __tablename__ = "activities"
+            tags_input = input("Tags (comma separated, e.g., family, adventure): ").strip()
+            tags = [Tag.get_or_create(session, t.strip()) for t in tags_input.split(",")] if tags_input else []
 
-    id = Column(Integer, primary_key=True)
-    name = Column(String, nullable=False)
-    description = Column(String, nullable=True)
-    activity_date = Column(Date, nullable=True)
-    cost = Column(Float, default=0.0)
+            Trip.create(session, name, start, end, notes, category, tags)
+            print(f"✅ Great! Trip '{name}' has been created.")
 
-    destination_id = Column(Integer, ForeignKey("destinations.id"))
-    destination = relationship("Destination", back_populates="activities")
 
-    @staticmethod
-    def create(session, name, destination, description=None, date=None, cost=0.0):
-        act = Activity(name=name, destination=destination, description=description, activity_date=date, cost=cost)
-        session.add(act)
-        session.commit()
-        return act
 
-    @staticmethod
-    def get_all(session):
-        return session.query(Activity).all()
+        elif choice == "2":
+            trips = Trip.get_all(session)
+            if not trips:
+                print("⚠ No trips yet. Time to plan one? ✈️")
+            else:
+                for trip in trips:
+                    cat = trip.category.name if trip.category else "None"
+                    tags = ", ".join([t.name for t in trip.tags]) or "None"
+                    print(f"{trip.id}. {trip.name} ({trip.start_date} → {trip.end_date}) | Category: {cat} | Tags: {tags}")
 
-    @staticmethod
-    def find_by_id(session, act_id):
-        return session.query(Activity).get(act_id)
+        elif choice == "3":
+            trip_id = input("Enter the Trip ID to delete: ").strip()
+            if trip_id.isdigit():
+                trip = Trip.find_by_id(session, int(trip_id))
+                if trip:
+                    trip.delete(session)
+                    print("🗑 Trip deleted successfully.")
+                else:
+                    print("⚠ That trip doesn’t exist.")
+            else:
+                print("⚠ Please enter a valid number.")
 
-    def delete(self, session):
-        session.delete(self)
-        session.commit()
+        elif choice == "4":
+            keyword = input("Enter a keyword to search (name or notes): ").strip().lower()
+            trips = Trip.get_all(session)
+            results = [t for t in trips if keyword in t.name.lower() or keyword in (t.notes or "").lower()]
+            if results:
+                print("\n🔎 Search Results:")
+                for t in results:
+                    cat = t.category.name if t.category else "None"
+                    tags = ", ".join([tg.name for tg in t.tags]) or "None"
+                    print(f"{t.id}. {t.name} ({t.start_date} → {t.end_date}) | Category: {cat} | Tags: {tags}")
+            else:
+                print("⚠ No trips matched your search.")
 
-class Category(Base):
-    __tablename__ = "categories"
+        elif choice == "5":
+            trip_id = input("Enter the Trip ID for a summary: ").strip()
+            if trip_id.isdigit():
+                trip = Trip.find_by_id(session, int(trip_id))
+                if not trip:
+                    print("⚠ Couldn’t find that trip.")
+                    continue
 
-    id = Column(Integer, primary_key=True)
-    name = Column(String, unique=True, nullable=False)
+                destinations = trip.destinations
+                activities = [a for d in destinations for a in d.activities]
+                total_cost = sum(a.cost or 0 for a in activities)
+                duration = (trip.end_date - trip.start_date).days if trip.start_date and trip.end_date else "N/A"
 
-    trips = relationship("Trip", back_populates="category")
+                print(f"\n📊 Summary for Trip: {trip.name}")
+                print(f"🗓 Dates: {trip.start_date} → {trip.end_date}")
+                print(f"🏷 Category: {trip.category.name if trip.category else 'None'}")
+                print(f"🔖 Tags: {', '.join([t.name for t in trip.tags]) or 'None'}")
+                print(f"📍 Destinations: {len(destinations)}")
+                print(f"🎟 Activities: {len(activities)}")
+                print(f"💰 Total Cost: ${total_cost:.2f}")
+                print(f"⏳ Duration: {duration} days")
+            else:
+                print("⚠ Please enter a valid Trip ID.")
 
-    @staticmethod
-    def get_or_create(session, name):
-        category = session.query(Category).filter_by(name=name).first()
-        if not category:
-            category = Category(name=name)
-            session.add(category)
-            session.commit()
-        return category
+        elif choice == "6":
+            break
+        else:
+            print("⚠ Invalid choice. Please try again.")
 
-class Tag(Base):
-    __tablename__ = "tags"
 
-    id = Column(Integer, primary_key=True)
-    name = Column(String, unique=True, nullable=False)
 
-    trips = relationship("Trip", secondary=trip_tags, back_populates="tags")
+if __name__ == "__main__":
+    main_menu()
 
-    @staticmethod
-    def get_or_create(session, name):
-        tag = session.query(Tag).filter_by(name=name).first()
-        if not tag:
-            tag = Tag(name=name)
-            session.add(tag)
-            session.commit()
-        return tag
