@@ -2,24 +2,26 @@ from lib.db.setup import init_db
 from lib.db.models import Trip, Destination, Activity, Category, Tag
 from datetime import datetime
 
+
 session = init_db()
 
 def parse_date(date_str):
     try:
         return datetime.strptime(date_str, "%Y-%m-%d").date() if date_str else None
     except ValueError:
-        print("⚠ Invalid date format, should be YYYY-MM-DD. Skipping.")
+        print("⚠ invalid date format, should be YYYY-MM-DD. Skipping.")
         return None
 
 def main_menu():
     while True:
-        print("\n--- Travel Journal ---")
-        print("1. Manage Trips")
-        print("2. Manage Destinations")
-        print("3. Manage Activities")
-        print("4. Exit")
+        print("\n🌍 Welcome to Your Travel Journal 🌍")
+        print("1. ✈ Manage Trips")
+        print("2. 🏝 Manage Destinations")
+        print("3. 🎟 Manage Activities")
+        print("4. 🚪 exit")
 
-        choice = input("Choose an option: ").strip()
+        choice = input("\n👉 Choose an option (1-4): ").strip()
+
 
         if choice == "1":
             trip_menu()
@@ -28,81 +30,81 @@ def main_menu():
         elif choice == "3":
             activity_menu()
         elif choice == "4":
-            print("Goodbye!")
+            print("\n👋 Thanks for using travel journal. safe travels!")
             break
         else:
-            print("Invalid choice, try again.")
+            print("⚠ hmm, i didnt get that. Please choose 1-4.")
 
 def trip_menu():
     while True:
-        print("\n--- Trip Menu ---")
-        print("1.➕ Create Trip")
-        print("2.📋 List Trips")
-        print("3.❌ Delete Trip")
-        print("4.🔍 Search Trips")
-        print("5.📊 Trip Summary & Stats")
-        print("6.🔙 Back to Main Menu")
+        print("\n--- 🧳 Trip Menu ---")
+        print("1. ➕ Create a new Trip")
+        print("2. 📋 View all Trips")
+        print("3. ❌ Delete a Trip")
+        print("4. 🔍 Search Trips")
+        print("5. 📊 Trip Summary & Stats")
+        print("6. 🔙 Back to Main Menu")
 
-        choice = input("Choose an option: ").strip()
+        choice = input("\n👉 Choose an option (1-6): ").strip()
+
+
 
         if choice == "1":
             name = input("Trip name: ").strip()
-            start = parse_date(input("Start date (YYYY-MM-DD, optional): ").strip())
-            end = parse_date(input("End date (YYYY-MM-DD, optional): ").strip())
-            notes = input("Notes (optional): ").strip()
+            start = parse_date(input("Start date (YYYY-MM-DD, leave blank if none): ").strip())
+            end = parse_date(input("End date (YYYY-MM-DD, leave blank if none): ").strip())
+            notes = input("Notes about this trip (optional): ").strip()
 
-            category_name = input("Category (optional): ").strip()
-            category = None
-            if category_name:
-                category = Category.get_or_create(session, category_name)
+            category_name = input("Category (optional, e.g., Vacation, Work): ").strip()
+            category = Category.get_or_create(session, category_name) if category_name else None
 
-            tags_input = input("Tags (comma separated, optional): ").strip()
-            tags = []
-            if tags_input:
-                tags = [Tag.get_or_create(session, t.strip()) for t in tags_input.split(",")]
+            tags_input = input("Tags (comma separated, e.g., family, adventure): ").strip()
+            tags = [Tag.get_or_create(session, t.strip()) for t in tags_input.split(",")] if tags_input else []
 
             Trip.create(session, name, start, end, notes, category, tags)
-            print(f"✅ Trip '{name}' created!")
+            print(f"✅ Great! Trip '{name}' has been created.")
 
-        elif choice == "2": 
+        elif choice == "2":
             trips = Trip.get_all(session)
             if not trips:
-                print("⚠ No trips found.")
-            for trip in trips:
-                cat = trip.category.name if trip.category else "None"
-                tags = ", ".join([t.name for t in trip.tags]) or "None"
-                print(f"{trip.id}. {trip.name} ({trip.start_date} → {trip.end_date}) | Category: {cat} | Tags: {tags}")
+                print("⚠ No trips yet. Time to plan one? ✈️")
+            else:
+                for trip in trips:
+                    cat = trip.category.name if trip.category else "None"
+                    tags = ", ".join([t.name for t in trip.tags]) or "None"
+                    print(f"{trip.id}. {trip.name} ({trip.start_date} → {trip.end_date}) | Category: {cat} | Tags: {tags}")
 
         elif choice == "3":
-            trip_id = input("Enter trip ID to delete: ").strip()
+            trip_id = input("Enter the Trip ID to delete: ").strip()
             if trip_id.isdigit():
                 trip = Trip.find_by_id(session, int(trip_id))
                 if trip:
                     trip.delete(session)
-                    print("🗑 Trip deleted.")
+                    print("🗑 Trip deleted successfully.")
                 else:
-                    print("⚠ Trip not found.")
+                    print("⚠ That trip doesn’t exist.")
             else:
-                print("⚠ Invalid ID.")
+                print("⚠ Please enter a valid number.")
 
-        elif choice == "4": 
-            keyword = input("Enter keyword to search in trip name/notes: ").strip().lower()
+        elif choice == "4":
+            keyword = input("Enter a keyword to search (name or notes): ").strip().lower()
             trips = Trip.get_all(session)
             results = [t for t in trips if keyword in t.name.lower() or keyword in (t.notes or "").lower()]
             if results:
+                print("\n🔎 Search Results:")
                 for t in results:
                     cat = t.category.name if t.category else "None"
                     tags = ", ".join([tg.name for tg in t.tags]) or "None"
                     print(f"{t.id}. {t.name} ({t.start_date} → {t.end_date}) | Category: {cat} | Tags: {tags}")
             else:
-                print("⚠ No matching trips found.")
+                print("⚠ No trips matched your search.")
 
-        elif choice == "5":  
-            trip_id = input("Enter Trip ID for summary: ").strip()
+        elif choice == "5":
+            trip_id = input("Enter the Trip ID for a summary: ").strip()
             if trip_id.isdigit():
                 trip = Trip.find_by_id(session, int(trip_id))
                 if not trip:
-                    print("⚠ Trip not found.")
+                    print("⚠ Couldnt find that trip.")
                     continue
 
                 destinations = trip.destinations
@@ -119,12 +121,13 @@ def trip_menu():
                 print(f"💰 Total Cost: ${total_cost:.2f}")
                 print(f"⏳ Duration: {duration} days")
             else:
-                print("⚠ Invalid ID.")
+                print("⚠ Please enter a valid Trip ID.")
+
 
         elif choice == "6":
             break
         else:
-            print("Invalid choice.")
+            print("⚠ Invalid choice. Please try again.")
 
 def destination_menu():
     while True:
@@ -134,6 +137,7 @@ def destination_menu():
         print("3. Delete Destination")
         print("4. Search Destinations")
         print("5. Back to Main Menu")
+
 
         choice = input("Choose an option: ").strip()
 
@@ -167,9 +171,9 @@ def destination_menu():
                 else:
                     print("⚠ Destination not found.")
             else:
-                print("⚠ Invalid ID.")
+                print("⚠ invalid ID.")
 
-        elif choice == "4":  
+        elif choice == "4":
             keyword = input("Enter city or country to search: ").strip().lower()
             results = [d for d in Destination.get_all(session)
                        if keyword in d.name.lower() or keyword in d.country.lower()]
@@ -183,6 +187,7 @@ def destination_menu():
             break
         else:
             print("Invalid choice.")
+
 
 def activity_menu():
     while True:
@@ -227,7 +232,9 @@ def activity_menu():
             else:
                 print("⚠ Invalid ID.")
 
-        elif choice == "4":  
+                
+
+        elif choice == "4":
             keyword = input("Enter keyword (name/description): ").strip().lower()
             min_cost = input("Min cost (optional): ").strip()
             max_cost = input("Max cost (optional): ").strip()
@@ -256,3 +263,4 @@ def activity_menu():
 
 if __name__ == "__main__":
     main_menu()
+
