@@ -1,4 +1,4 @@
-from lib.db import init_db
+from lib.db.setup import init_db
 from lib.db.models import Trip, Destination, Activity, Category, Tag
 from datetime import datetime
 
@@ -36,12 +36,12 @@ def main_menu():
 def trip_menu():
     while True:
         print("\n--- Trip Menu ---")
-        print("1. Create Trip")
-        print("2. List Trips")
-        print("3. Delete Trip")
-        print("4. Search Trips")
-        print("5. Trip Summary & Stats")
-        print("6. Back to Main Menu")
+        print("1.➕ Create Trip")
+        print("2.📋 List Trips")
+        print("3.❌ Delete Trip")
+        print("4.🔍 Search Trips")
+        print("5.📊 Trip Summary & Stats")
+        print("6.🔙 Back to Main Menu")
 
         choice = input("Choose an option: ").strip()
 
@@ -111,13 +111,13 @@ def trip_menu():
                 duration = (trip.end_date - trip.start_date).days if trip.start_date and trip.end_date else "N/A"
 
                 print(f"\n📊 Summary for Trip: {trip.name}")
-                print(f"Dates: {trip.start_date} → {trip.end_date}")
-                print(f"Category: {trip.category.name if trip.category else 'None'}")
-                print(f"Tags: {', '.join([t.name for t in trip.tags]) or 'None'}")
-                print(f"Destinations: {len(destinations)}")
-                print(f"Activities: {len(activities)}")
-                print(f"Total Cost: ${total_cost:.2f}")
-                print(f"Duration: {duration} days")
+                print(f"🗓 Dates: {trip.start_date} → {trip.end_date}")
+                print(f"🏷 Category: {trip.category.name if trip.category else 'None'}")
+                print(f"🔖 Tags: {', '.join([t.name for t in trip.tags]) or 'None'}")
+                print(f"📍 Destinations: {len(destinations)}")
+                print(f"🎟 Activities: {len(activities)}")
+                print(f"💰 Total Cost: ${total_cost:.2f}")
+                print(f"⏳ Duration: {duration} days")
             else:
                 print("⚠ Invalid ID.")
 
